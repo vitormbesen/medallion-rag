@@ -6,6 +6,11 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
 
+[tool.uv.workspace]
+members = [
+    "medallion-rag",
+]
+
 # --- PYRIGHT
 [tool.pyright]
 typeCheckingMode = "standard"
@@ -91,7 +96,4 @@ pydocstyle = { convention = "google" }
 pep8-naming = { ignore-names = ["X", "y", "N", "C", "D", "H", "W", "T", "B"] }
 isort = { force-sort-within-sections = true }
 
-[tool.uv.workspace]
-members = [
-    "medallion-rag",
-]
+
