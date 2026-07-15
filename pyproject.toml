@@ -1,0 +1,97 @@
+[project]
+name = "final-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+# --- PYRIGHT
+[tool.pyright]
+typeCheckingMode = "standard"
+venv = ".venv"
+venvPath = "."
+reportMissingImports = true
+
+# --- RUFF
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+    "A",     # flake8-builtins
+    "AIR3",  # Airflow3
+    "ARG",   # flake8-unused-arguments
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "C90",   # mccabe complexity
+    "COM",   # flake8-commas
+    "D",     # pydocstyle (docstrings)
+    "E",     # pycodestyle errors
+    "EM",    # flake8-errmsg
+    "F",     # pyflakes errors
+    "FLY",   # flynt
+    "FURB",  # refurb
+    "G",     # flake8-logging-format
+    "I",     # isort
+    "ICN",   # flake8-import-conventions
+    "INP",   # flake8-no-pep420
+    "INT",   # flake8-gettext
+    "ISC",   # flake8-implicit-str-concat
+    "LOG",   # flake8-logging
+    "N",     # pep8-naming
+    "PERF",  # Perflint
+    "PGH",   # pygrep-hooks
+    "PIE",   # flake8-pie
+    "PL",    # pylint
+    "PT",    # flake8-pytest-style
+    "PTH",   # flake8-use-pathlib
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RET",   # flake8-return
+    "RSE",   # flake8-raise
+    "RUF",   # ruff-specific rules
+    "SIM",   # flake8-simplify
+    "SLF",   # flake8-self
+    "TC",    # flake8-type-checking
+    "TID",   # flake8-tidy-imports
+    "TRY",   # tryceratops
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
+    "YTT",   # flake8-2020
+]
+
+ignore = [
+    "D100",    # Missing docstring in public module
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "D104",    # Missing docstring in public package
+    "D105",    # Missing docstring in magic methods
+    "D107",    # Missing docstring in __init__ methods
+    "D205",    # 1 blank line required between summary line and description
+    "D212",    # Multi-line docstring summary should start at the first line
+    "G004",    # Logging statement uses f-string
+    "PLR0402", # manual-from-import
+    "PLR0913", # too-many-arguments
+    "RUF022",  # unsorted __all__
+]
+
+unfixable = [
+    "F401", # Unused imports (report but do not auto-remove)
+]
+
+flake8-quotes = { inline-quotes = "single" }
+pydocstyle = { convention = "google" }
+pep8-naming = { ignore-names = ["X", "y", "N", "C", "D", "H", "W", "T", "B"] }
+isort = { force-sort-within-sections = true }
+
+[tool.uv.workspace]
+members = [
+    "medallion-rag",
+]
