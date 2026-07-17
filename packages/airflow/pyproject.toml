@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "apache-airflow[postgres,standard]>=3.2.2",
     "medallion-rag>=0.1.0",
 ]
 
