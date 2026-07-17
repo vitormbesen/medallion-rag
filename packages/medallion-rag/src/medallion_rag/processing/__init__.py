@@ -1,1 +1,1 @@
-"""Processing logic for each layer."""
+"""Processing logic for each layer: extraction, cleaning, etc."""

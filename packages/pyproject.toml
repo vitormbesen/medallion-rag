@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pgvector>=0.5.0",
+    "sqlalchemy>=2.0.51",
+]
 
 [tool.uv.workspace]
 members = [
