@@ -8,5 +8,8 @@ wheels/
 .project_idea.md
 .prototyping/
 
+packages/airflow/config/airflow.cfg
+packages/airflow/logs/
+
 # Virtual environments
 .venv

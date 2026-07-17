@@ -4,7 +4,7 @@ import pendulum
 tz = pendulum.timezone('America/Sao_Paulo')
 task_common_args = dict(  # noqa: C408
     retries=3,
-    retry_interval=pendulum.duration(minutes=5),
+    retry_delay=pendulum.duration(minutes=5),
     retry_exponential_backoff=True,
     max_active_tis_per_dagrun=1,
 )
