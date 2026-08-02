@@ -1,5 +1,21 @@
+from typing import TYPE_CHECKING
+
 from airflow.sdk import chain, dag, task
 import pendulum
+from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from sqlalchemy import Engine
+
+
+def get_db_engine(conn_id: str) -> Engine:
+    from airflow.providers.postgres.hooks.postgres import PostgresHook
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import NullPool
+
+    hook = PostgresHook(postgres_conn_id=conn_id)
+    return create_engine(hook.get_uri(), poolclass=NullPool)
+
 
 tz = pendulum.timezone('America/Sao_Paulo')
 task_common_args = dict(  # noqa: C408
@@ -22,7 +38,13 @@ def silver_layer() -> None:
 
 @task(task_id='gold')
 def gold_layer() -> None:
-    pass
+    engine = get_db_engine(conn_id='db_project')
+    try:
+        with Session(engine) as session:
+            ...
+            # function logic receiving session
+    finally:
+        engine.dispose()
 
 
 @dag(

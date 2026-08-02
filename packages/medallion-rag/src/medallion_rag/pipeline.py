@@ -1,11 +1,14 @@
 import math
 from typing import TYPE_CHECKING
 
-from .persistance.reading import read_bronze_for_date, read_silver_for_date
+import pendulum
+
+from .persistance.reading import read_bronze_for_documents, read_silver_for_missing_embeddings_chunks
 from .persistance.writing import write_to_bronze, write_to_gold, write_to_silver
 
 # from .processing.bronze import ...
 from .processing.gold import generate_embeddings
+from .processing.silver import chunk_documents
 
 if TYPE_CHECKING:
     from datetime import date
@@ -14,17 +17,38 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-def bronze_layer():
-    pass
+def bronze_layer() -> None:
+    """
+    Bronze layer logic.
+    1. Ingests data from source (API, files, documents, etc).
+    2. Persist raw data to the Bronze layer schema.
+    """
+    # maybe add some verification to see if the document has changed or is the same
 
 
-def silver_layer():
-    pass
+def silver_layer(logical_date: date, session: Session) -> None:
+    """
+    Silver layer logic.
+    1. Read data from Bronze layer.
+    2. Apply chunking logic.
+    3. Persist chunks to Silver layer schema.
+    """
+    # Read data documents in Bronze layer that have been ingested in the respective logical date
+    bronze_rows = read_bronze_for_documents(logical_date=logical_date, session=session)
+
+    silver_rows = chunk_documents(rows=bronze_rows, logical_date=logical_date)
+    write_to_silver(rows=silver_rows, session=session)
 
 
-def gold_layer(logical_date: date, session: Session, model: SentenceTransformer, batch_size: int = 32):
+def gold_layer(logical_date: date, session: Session, model: SentenceTransformer, batch_size: int = 32) -> None:
+    """
+    Gold layer logic.
+    1. Read data from Silver layer.
+    2. Apply embedding logic.
+    3. Persist embeddings to gold layer schema.
+    """
     # Each row is a chunk
-    silver_rows: list[dict] = read_silver_for_date(logical_date=logical_date, session=session)
+    silver_rows: list[dict] = read_silver_for_missing_embeddings_chunks(logical_date=logical_date, session=session)
 
     # Partition data into batches
     n_batches = math.ceil(len(silver_rows) / batch_size)
@@ -46,7 +70,8 @@ def gold_layer(logical_date: date, session: Session, model: SentenceTransformer,
                     'chunk_id': silver_row['chunk_id'],
                     'document_id': silver_row['document_id'],
                     'embedding': emb,
-                    'updated_at': logical_date,
+                    'updated_at': pendulum.now(),
+                    'logical_date': logical_date,
                 },
             )
 

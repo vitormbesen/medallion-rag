@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from .models import ProcessedChunk, RawDocument
+from .models import DocumentEmbedding, ProcessedChunk, RawDocument
 
 if TYPE_CHECKING:
     from datetime import date
@@ -12,11 +12,12 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-def read_bronze_for_date(logical_date: date, session: Session) -> list[dict]:
+def read_bronze_for_documents(logical_date: date, session: Session) -> list[dict]:
     """
     Read bronze rows for a given logical_date.
     Utilized to obtain data for the silver layer processing.
     """
+    # Read the documents ingested in the particular logical_date
     stmt = select(
         RawDocument.document_id,
         RawDocument.payload,
@@ -25,14 +26,23 @@ def read_bronze_for_date(logical_date: date, session: Session) -> list[dict]:
     return [dict(row) for row in session.execute(stmt).mappings()]
 
 
-def read_silver_for_date(logical_date: date, session: Session) -> list[dict]:
+def read_silver_for_missing_embeddings_chunks(logical_date: date, session: Session) -> list[dict]:
     """
     Read silver chunks for the given `date`.
     Utilized to obtain data for the gold layer processing.
     """
-    stmt = select(
-        ProcessedChunk.chunk_id,
-        ProcessedChunk.document_id,
-        ProcessedChunk.chunk_text,
-    ).where(ProcessedChunk.processed_at == logical_date)
+    # Select the chunks which are not present in the Gold layer
+    stmt = (
+        select(
+            ProcessedChunk.chunk_id,
+            ProcessedChunk.document_id,
+            ProcessedChunk.chunk_text,
+        )
+        .outerjoin(DocumentEmbedding, DocumentEmbedding.chunk_id == ProcessedChunk.chunk_id)
+        .where(
+            DocumentEmbedding.chunk_id.is_(None),
+            ProcessedChunk.logical_date == logical_date,
+        )
+    )
+
     return [dict(row) for row in session.execute(stmt).mappings()]
