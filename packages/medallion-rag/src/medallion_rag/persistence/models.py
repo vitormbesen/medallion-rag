@@ -1,14 +1,19 @@
 """Source of truth for schemas and tables for SQL database."""
 
-from datetime import date, datetime
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import TIMESTAMP, Date, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+if TYPE_CHECKING:
+    from datetime import date, datetime
 
-class BaseSchemaTable(DeclarativeBase):
+
+class BaseSchemaTable(DeclarativeBase):  # noqa: D101
     pass
 
 
@@ -16,7 +21,7 @@ class RawDocument(BaseSchemaTable):
     """Bronze layer table."""
 
     __tablename__ = 'raw_documents'
-    __table_args__ = {'schema': 'bronze'}
+    __table_args__ = {'schema': 'bronze'}  # noqa: RUF012
 
     document_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
@@ -56,7 +61,7 @@ class DocumentEmbedding(BaseSchemaTable):
     """Gold layer table."""
 
     __tablename__ = 'document_embeddings'
-    __table_args__ = {'schema': 'gold'}
+    __table_args__ = {'schema': 'gold'}  # noqa: RUF012
 
     chunk_id: Mapped[str] = mapped_column(
         String(255),

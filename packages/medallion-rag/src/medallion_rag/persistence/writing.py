@@ -21,7 +21,9 @@ def build_upsert_dict(
         custom_cols = {}
 
     return {
-        col.name: insert_stmt.excluded[col.name] for col in model_class.__table__.columns if col.name not in custom_cols
+        col.name: insert_stmt.excluded[col.name]  # pyright: ignore[reportAttributeAccessIssue]
+        for col in model_class.__table__.columns
+        if col.name not in custom_cols
     } | custom_cols
 
 
@@ -46,7 +48,7 @@ def write_to_silver(rows: list[dict], session: Session) -> None:
         ProcessedChunk,
     )
     stmt = stmt.on_conflict_do_update(
-        index_elements=['document_id', 'chunk_id'],
+        index_elements=['chunk_id'],
         set_=upsert_dict,
     )
     session.execute(stmt)
