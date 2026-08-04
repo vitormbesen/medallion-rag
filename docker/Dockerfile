@@ -1,25 +1,32 @@
-FROM apache/airflow:3.2.2-python3.14
+FROM apache/airflow:slim-3.2.2-python3.14
 
-# uv binary
+USER root
+
+# 1. Install uv binary
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy package code
-COPY --chown=airflow:root ./medallion-rag /opt/airflow/medallion-rag
+# 2. Install essential C-compilation tools & Postgres client headers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Package installation in Airflow environment requires root
-USER root
-COPY ./medallion-rag/pyproject.toml /tmp/medallion-rag/
+WORKDIR /opt/airflow/app
+ENV UV_SYSTEM_PYTHON=1
 
-# 4. CACHED LAYER: Install dependencies directly into the system Python
-# uv will resolve and download everything here. This layer caches heavily.
-RUN uv pip install --system --no-cache-dir -r /tmp/medallion-rag/pyproject.toml
+# 3. Copy packages directory
+COPY packages /opt/airflow/app
 
-# 5. UNCACHED LAYER: Copy the actual source code (changes frequently)
-COPY --chown=airflow:root ./medallion-rag /opt/airflow/medallion-rag
+# 4. Force install psycopg2-binary, fab provider, and local workspace packages
+RUN uv pip install \
+    --index-strategy unsafe-best-match \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    psycopg2-binary \
+    apache-airflow-providers-fab \
+    -e /opt/airflow/app/medallion-rag \
+    -e /opt/airflow/app/airflow
 
-# 6. Install the package itself (fast because dependencies are already present)
-RUN uv pip install --system --no-cache-dir --no-deps /opt/airflow/medallion-rag
-
-# 7. Switch back to safe airflow runtime user
+# 5. Fix permissions and switch to airflow user
+RUN chown -R airflow:root /opt/airflow/app
 USER airflow
-

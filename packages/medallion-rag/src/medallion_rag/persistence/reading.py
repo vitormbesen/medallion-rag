@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from .models import DocumentEmbedding, ProcessedChunk, RawDocument
 

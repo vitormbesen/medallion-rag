@@ -1,0 +1,14 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.cache
+packages/airflow/logs/
+packages/airflow/plugins/
+packages/airflow/dags/
+packages/**/.venv
+packages/**/data
+packages/**/models
+packages/**/.cache

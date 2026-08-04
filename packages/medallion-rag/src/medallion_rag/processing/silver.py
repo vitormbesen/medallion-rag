@@ -3,10 +3,17 @@
 import hashlib
 from typing import TYPE_CHECKING
 
-from nltk.tokenize import sent_tokenize
+# from nltk.tokenize import sent_tokenize
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 if TYPE_CHECKING:
     from datetime import date
+
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    separators=['\n\n', '\n', '. ', ' ', ''],
+)
 
 
 # TODO: airflow: `get_updated_docs`, apply expand on chunking + writing
@@ -22,7 +29,7 @@ def chunk_documents(rows: list[dict], logical_date: date) -> list[dict]:
         doc_id = r['document_id']
 
         # Get chunks
-        chunks = sent_tokenize(r['payload'].get('text'))
+        chunks = text_splitter.split_text(r['payload'].get('text'))
         for idx, chunk in enumerate(chunks):
             silver_rows.append(
                 {

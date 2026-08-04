@@ -44,7 +44,7 @@ def bronze_layer(title: str) -> None:
     # Instantiate function dependencies
     engine = get_db_engine(conn_id='db_project')
     context = get_current_context()
-    logical_date = context['ts']
+    logical_date = context['logical_date']
     try:
         with Session(engine) as session:
             bronze_layer(
@@ -64,7 +64,7 @@ def silver_layer() -> None:
     # Instantiate function dependencies
     engine = get_db_engine(conn_id='db_project')
     context = get_current_context()
-    logical_date = context['ts']
+    logical_date = context['logical_date']
 
     try:
         with Session(engine) as session:
@@ -85,7 +85,7 @@ def gold_layer() -> None:
     # Instantiate function dependencies
     engine = get_db_engine(conn_id='db_project')
     context = get_current_context()
-    logical_date = context['ts']
+    logical_date = context['logical_date']
     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
     try:

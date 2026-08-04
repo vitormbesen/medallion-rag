@@ -10,13 +10,15 @@ requires-python = ">=3.14"
 dependencies = [
     "omegaconf>=2.3.1",
     "pydantic>=2.13.4",
-    "transformers>=5.13.1",
+    #"transformers<5.13.1",
+    #"tokenizers>=0.23.1",
     "torch",
     "sentence-transformers",
     "pendulum>=3.2.0",
     "sqlalchemy>=2.0.51",
-    "nltk>=3.10.1",
     "pgvector>=0.5.0",
+    "langchain-text-splitters>=1.1.2",
+    "psycopg2-binary>=2.9.12",
 ]
 
 [[tool.uv.index]]

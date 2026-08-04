@@ -8,14 +8,18 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "apache-airflow[postgres,standard]>=3.2.2",
+    "apache-airflow[postgres,standard, fab]>=3.2.2",
     "medallion-rag>=0.1.0",
 ]
 
-#[build-system]
-#requires = ["hatchling"]
-#build-backend = "hatchling.build"
-
 [tool.uv.sources]
-medallion-rag = { path = "../medallion-rag", editable = true }
+medallion-rag = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# Tell setuptools NOT to treat dags/config folders as python packages
+[tool.setuptools]
+packages = []
 

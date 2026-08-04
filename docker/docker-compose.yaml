@@ -51,8 +51,8 @@ x-airflow-common:
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   #image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.2.2-python3.14}
   build:
-    context: ../packages/
-    dockerfile: ../docker/Dockerfile
+    context: ..
+    dockerfile: docker/Dockerfile
   env_file:
     - ${ENV_FILE_PATH:-.env}
   environment:
