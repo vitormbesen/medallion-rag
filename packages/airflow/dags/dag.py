@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from airflow.sdk import chain, dag, task
+from airflow.sdk import chain, dag, get_current_context, task, task_group
 import pendulum
 from sqlalchemy.orm import Session
 
@@ -25,24 +25,76 @@ task_common_args = dict(  # noqa: C408
     max_active_tis_per_dagrun=1,
 )
 
+@task(task_id='init_database')
+def initialize_database():
+    from medallion_rag.persistence.models import init_database
+
+    engine = get_db_engine(conn_id='db_project')
+    try:
+        init_database(engine)
+    finally:
+        engine.dispose()
+
 
 @task(task_id='bronze')
-def bronze_layer() -> None:
-    pass
+def bronze_layer(title: str) -> None:
+    # Lazy Imports
+    from medallion_rag.pipeline import bronze_layer
+
+    # Instantiate function dependencies
+    engine = get_db_engine(conn_id='db_project')
+    context = get_current_context()
+    logical_date = context['ts']
+    try:
+        with Session(engine) as session:
+            bronze_layer(
+                title=title,
+                session=session,
+                logical_date=logical_date,
+            )
+    finally:
+        engine.dispose()
 
 
 @task(task_id='silver')
 def silver_layer() -> None:
-    pass
+    # Lazy imports
+    from medallion_rag.pipeline import silver_layer
+
+    # Instantiate function dependencies
+    engine = get_db_engine(conn_id='db_project')
+    context = get_current_context()
+    logical_date = context['ts']
+
+    try:
+        with Session(engine) as session:
+            silver_layer(
+                logical_date=logical_date,
+                session=session,
+            )
+    finally:
+        engine.dispose()
 
 
 @task(task_id='gold')
 def gold_layer() -> None:
+    # Lazy import
+    from medallion_rag.pipeline import gold_layer
+    from sentence_transformers import SentenceTransformer
+
+    # Instantiate function dependencies
     engine = get_db_engine(conn_id='db_project')
+    context = get_current_context()
+    logical_date = context['ts']
+    model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+
     try:
         with Session(engine) as session:
-            ...
-            # function logic receiving session
+            gold_layer(
+                logical_date=logical_date,
+                session=session,
+                model=model,
+            )
     finally:
         engine.dispose()
 
@@ -57,11 +109,14 @@ def gold_layer() -> None:
     default_args=task_common_args,
 )
 def rag_population() -> None:
-    bronze = bronze_layer()
+    titles = ['Buddhism', 'Hinduism']
+
+    db_init = initialize_database()
+    bronze = bronze_layer.expand(title=titles)
     silver = silver_layer()
     gold = gold_layer()
 
-    chain(bronze, silver, gold)
+    chain(db_init, bronze, silver, gold)
 
 
 dag_object = rag_population()
