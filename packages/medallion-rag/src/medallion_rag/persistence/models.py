@@ -26,6 +26,15 @@ def init_database(engine: Engine) -> None:
         conn.commit()
 
     BaseSchemaTable.metadata.create_all(bind=engine)
+    
+    # Create index for vectors
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_doc_embeddings_hnsw
+            ON gold.document_embeddings
+            USING hnsw (embedding vector_ip_ops)
+            WITH (m = 16, ef_construction = 64);
+        """))
 
 class BaseSchemaTable(DeclarativeBase):  # noqa: D101
     pass

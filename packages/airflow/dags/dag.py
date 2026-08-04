@@ -1,12 +1,19 @@
 from typing import TYPE_CHECKING
 
-from airflow.sdk import chain, dag, get_current_context, task, task_group
+from airflow.sdk import chain, dag, get_current_context, task
 import pendulum
 from sqlalchemy.orm import Session
-
 if TYPE_CHECKING:
     from sqlalchemy import Engine
 
+
+tz = pendulum.timezone('America/Sao_Paulo')
+task_common_args = dict(  # noqa: C408
+    retries=3,
+    retry_delay=pendulum.duration(minutes=5),
+    retry_exponential_backoff=True,
+    max_active_tis_per_dagrun=4,
+)
 
 def get_db_engine(conn_id: str) -> Engine:
     from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -16,14 +23,12 @@ def get_db_engine(conn_id: str) -> Engine:
     hook = PostgresHook(postgres_conn_id=conn_id)
     return create_engine(hook.get_uri(), poolclass=NullPool)
 
+def get_engine_and_logical_date():
+    engine = get_db_engine(conn_id='db_project')
+    context = get_current_context()
+    logical_date = context['logical_date']
+    return engine, logical_date
 
-tz = pendulum.timezone('America/Sao_Paulo')
-task_common_args = dict(  # noqa: C408
-    retries=3,
-    retry_delay=pendulum.duration(minutes=5),
-    retry_exponential_backoff=True,
-    max_active_tis_per_dagrun=1,
-)
 
 @task(task_id='init_database')
 def initialize_database():
@@ -42,9 +47,7 @@ def bronze_layer(title: str) -> None:
     from medallion_rag.pipeline import bronze_layer
 
     # Instantiate function dependencies
-    engine = get_db_engine(conn_id='db_project')
-    context = get_current_context()
-    logical_date = context['logical_date']
+    engine, logical_date = get_engine_and_logical_date()
     try:
         with Session(engine) as session:
             bronze_layer(
@@ -62,9 +65,7 @@ def silver_layer() -> None:
     from medallion_rag.pipeline import silver_layer
 
     # Instantiate function dependencies
-    engine = get_db_engine(conn_id='db_project')
-    context = get_current_context()
-    logical_date = context['logical_date']
+    engine, logical_date = get_engine_and_logical_date()
 
     try:
         with Session(engine) as session:
@@ -83,9 +84,7 @@ def gold_layer() -> None:
     from sentence_transformers import SentenceTransformer
 
     # Instantiate function dependencies
-    engine = get_db_engine(conn_id='db_project')
-    context = get_current_context()
-    logical_date = context['logical_date']
+    engine, logical_date = get_engine_and_logical_date()
     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
     try:
@@ -109,7 +108,7 @@ def gold_layer() -> None:
     default_args=task_common_args,
 )
 def rag_population() -> None:
-    titles = ['Buddhism', 'Hinduism']
+    titles = ['Buddhism', 'Hinduism', 'Christianity']
 
     db_init = initialize_database()
     bronze = bronze_layer.expand(title=titles)
@@ -119,4 +118,4 @@ def rag_population() -> None:
     chain(db_init, bronze, silver, gold)
 
 
-dag_object = rag_population()
+dag_instance = rag_population()
