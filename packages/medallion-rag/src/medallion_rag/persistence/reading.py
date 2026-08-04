@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from .models import DocumentEmbedding, ProcessedChunk, RawDocument
 
@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from datetime import date
 
     from sqlalchemy.orm import Session
+
 
 
 def read_bronze_for_documents(logical_date: date, session: Session) -> list[dict]:
@@ -31,7 +32,9 @@ def read_silver_for_missing_embeddings_chunks(logical_date: date, session: Sessi
     Read silver chunks for the given `date`.
     Utilized to obtain data for the gold layer processing.
     """
-    # Select the chunks which are not present in the Gold layer
+    # Select the chunks which are not present in the Gold layer.
+    # That is, if the document is already embedded, there is no need
+    # redo the calculation.
     stmt = (
         select(
             ProcessedChunk.chunk_id,

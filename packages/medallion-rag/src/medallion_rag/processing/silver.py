@@ -1,12 +1,4 @@
-"""
-will read from bronze table, extract data, apply chunking
-and write to silver table.
-
-only references the payload.
-
-bronze (payload)
-silver (reads payload from bronze, transform into chunks)
-"""
+"""Processing data from the Bronze layer for persistence on the Silver layer."""
 
 import hashlib
 from typing import TYPE_CHECKING
@@ -17,6 +9,7 @@ if TYPE_CHECKING:
     from datetime import date
 
 
+# TODO: airflow: `get_updated_docs`, apply expand on chunking + writing
 def get_unique_chunk_id(document_id: int | str, chunk_idx: int, chunk_text: str) -> str:
     """Generate a unique chunk_id, which is used as primary key."""
     return hashlib.sha256(f'{document_id}:{chunk_idx}:{chunk_text}'.encode()).hexdigest()

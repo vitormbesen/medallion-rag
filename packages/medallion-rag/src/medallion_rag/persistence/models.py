@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import TIMESTAMP, Date, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import TIMESTAMP, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 if TYPE_CHECKING:
-    from datetime import date, datetime
+    from sqlalchemy import Engine
 
+
+def init_database(engine: Engine) -> None:
+    """Creates schemas, if they are do not exist."""
+    with engine.connect() as conn:
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS bronze;'))
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS silver;'))
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS gold;'))
+
+        conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector;'))
+
+        conn.commit()
+
+    BaseSchemaTable.metadata.create_all(bind=engine)
 
 class BaseSchemaTable(DeclarativeBase):  # noqa: D101
     pass
@@ -30,7 +44,7 @@ class RawDocument(BaseSchemaTable):
         nullable=False,
         server_default=func.now(),
     )
-    logical_date: Mapped[date] = mapped_column(Date, nullable=False)
+    logical_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
 
 class ProcessedChunk(BaseSchemaTable):
@@ -54,7 +68,7 @@ class ProcessedChunk(BaseSchemaTable):
         nullable=False,
         server_default=func.now(),
     )
-    logical_date: Mapped[date] = mapped_column(Date, nullable=False)
+    logical_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
 
 class DocumentEmbedding(BaseSchemaTable):
@@ -75,4 +89,4 @@ class DocumentEmbedding(BaseSchemaTable):
         nullable=False,
         server_default=func.now(),
     )
-    logical_date: Mapped[date] = mapped_column(Date, nullable=False)
+    logical_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

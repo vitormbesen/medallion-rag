@@ -6,7 +6,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
-    from torch import Tensor
 
 
 def generate_embeddings(

@@ -20,10 +20,13 @@ def build_upsert_dict(
     if custom_cols is None:
         custom_cols = {}
 
+    pk_cols = {col.name for col in model_class.__table__.primary_key.columns}
+    exclude_cols = pk_cols | set(custom_cols.keys())
+
     return {
         col.name: insert_stmt.excluded[col.name]  # pyright: ignore[reportAttributeAccessIssue]
         for col in model_class.__table__.columns
-        if col.name not in custom_cols
+        if col.name not in exclude_cols
     } | custom_cols
 
 
