@@ -9,6 +9,7 @@ dependencies = [
     "psycopg2-binary>=2.9.12",
     "sqlalchemy>=2.0.51",
     "medallion-rag>=0.1.0",
+    "ipykernel>=7.3.0",
 ]
 
 

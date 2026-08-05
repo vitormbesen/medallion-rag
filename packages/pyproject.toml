@@ -12,7 +12,6 @@ dependencies = [
 
 [tool.uv.workspace]
 members = [
-    "airflow",
     "medallion-rag",
 ]
 

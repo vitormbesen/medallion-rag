@@ -1,32 +1,26 @@
 FROM apache/airflow:slim-3.2.2-python3.14
 
+# Install uv binary
 USER root
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
-# 1. Install uv binary
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        git \
+        build-essential \
+ && rm -rf /var/lib/apt/lists/*
 
-# 2. Install essential C-compilation tools & Postgres client headers
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ENV UV_PYTHON=/usr/local/bin/python \
+    UV_PROJECT_ENVIRONMENT=/usr/local \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_LINK_MODE=copy
 
-WORKDIR /opt/airflow/app
-ENV UV_SYSTEM_PYTHON=1
+# Copy medallion-rag + airflow package dependencies
+COPY packages /opt/packages
 
-# 3. Copy packages directory
-COPY packages /opt/airflow/app
+# Install the uv airflow project (which already contains medallion-rag)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system /opt/packages/airflow
 
-# 4. Force install psycopg2-binary, fab provider, and local workspace packages
-RUN uv pip install \
-    --index-strategy unsafe-best-match \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
-    psycopg2-binary \
-    apache-airflow-providers-fab \
-    -e /opt/airflow/app/medallion-rag \
-    -e /opt/airflow/app/airflow
-
-# 5. Fix permissions and switch to airflow user
-RUN chown -R airflow:root /opt/airflow/app
 USER airflow
+WORKDIR /opt/airflow
