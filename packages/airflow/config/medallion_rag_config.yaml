@@ -1,0 +1,10 @@
+bronze:
+  user_agent: "MedallionRAG/1.0 (1664842@pucminas.edu.br) Airflow-class-project"
+  titles:
+    - Buddhism
+    - Hinduism
+    - Christianity
+
+gold:
+  model: 'sentence-transformers/all-MiniLM-L6-v2'
+  batch_size: 32

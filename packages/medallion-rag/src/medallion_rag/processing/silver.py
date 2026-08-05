@@ -16,7 +16,6 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 
 
-# TODO: airflow: `get_updated_docs`, apply expand on chunking + writing
 def get_unique_chunk_id(document_id: int | str, chunk_idx: int, chunk_text: str) -> str:
     """Generate a unique chunk_id, which is used as primary key."""
     return hashlib.sha256(f'{document_id}:{chunk_idx}:{chunk_text}'.encode()).hexdigest()

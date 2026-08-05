@@ -1,11 +1,6 @@
 import math
 from typing import TYPE_CHECKING
 
-import pendulum
-
-# from .processing.bronze import ...
-
-
 if TYPE_CHECKING:
     from datetime import date
 
@@ -13,7 +8,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-def bronze_layer(title: str, logical_date: date, session: Session) -> None:
+def bronze_layer(title: str, logical_date: date, session: Session, user_agent: str) -> None:
     """
     Bronze layer logic.
     1. Ingests data from source (API, files, documents, etc).
@@ -22,7 +17,7 @@ def bronze_layer(title: str, logical_date: date, session: Session) -> None:
     from .persistence.writing import write_to_bronze
     from .processing.bronze import fetch_document_from_api
 
-    rows = fetch_document_from_api(title=title, logical_date=logical_date)
+    rows = fetch_document_from_api(title=title, logical_date=logical_date, user_agent=user_agent)
     write_to_bronze(rows=rows, session=session)
 
 

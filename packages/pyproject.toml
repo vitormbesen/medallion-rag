@@ -89,6 +89,8 @@ ignore = [
     "PLR0402", # manual-from-import
     "PLR0913", # too-many-arguments
     "RUF022",  # unsorted __all__
+    "PLC0415", # `import` should be at the top-level of a file
+    "C408", # Unnecessary `dict()` call (rewrite as a literal)
 ]
 
 unfixable = [

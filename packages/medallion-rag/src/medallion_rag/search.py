@@ -10,8 +10,8 @@ from .persistence.models import DocumentEmbedding, ProcessedChunk
 
 if TYPE_CHECKING:
     import numpy as np
-    from sqlalchemy.orm import Session
     from sentence_transformers import SentenceTransformer
+    from sqlalchemy.orm import Session
 
 
 def search_chunks(
@@ -21,18 +21,17 @@ def search_chunks(
     top_k: int = 5,
     ef_search: int | None = None,
 ) -> list[dict]:
-    """
-    Return the top-k chunks most similar to `query`.
-    """
+    """Return the top-k chunks most similar to `query`."""
     if ef_search is not None:
         session.execute(select(1).execution_options())
         from sqlalchemy import text
+
         session.execute(text(f'SET LOCAL hnsw.ef_search = {int(ef_search)};'))
 
     query_vec = model.encode([query], normalize_embeddings=True)[0]
 
     distance = DocumentEmbedding.embedding.max_inner_product(query_vec).label('distance')
-    
+
     # Distance retrieives chunk ids. We need to query the silver layer for actual text
     stmt = (
         select(
@@ -51,6 +50,5 @@ def search_chunks(
 
     rows = [dict(r) for r in session.execute(stmt).mappings()]
     for r in rows:
-        # Convert negated inner product → similarity
         r['similarity'] = -r.pop('distance')
     return rows

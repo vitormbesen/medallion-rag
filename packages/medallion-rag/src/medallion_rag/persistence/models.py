@@ -14,28 +14,6 @@ if TYPE_CHECKING:
     from sqlalchemy import Engine
 
 
-def init_database(engine: Engine) -> None:
-    """Creates schemas, if they are do not exist."""
-    with engine.connect() as conn:
-        conn.execute(text('CREATE SCHEMA IF NOT EXISTS bronze;'))
-        conn.execute(text('CREATE SCHEMA IF NOT EXISTS silver;'))
-        conn.execute(text('CREATE SCHEMA IF NOT EXISTS gold;'))
-
-        conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector;'))
-
-        conn.commit()
-
-    BaseSchemaTable.metadata.create_all(bind=engine)
-    
-    # Create index for vectors
-    with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_doc_embeddings_hnsw
-            ON gold.document_embeddings
-            USING hnsw (embedding vector_ip_ops)
-            WITH (m = 16, ef_construction = 64);
-        """))
-
 class BaseSchemaTable(DeclarativeBase):  # noqa: D101
     pass
 
@@ -99,3 +77,28 @@ class DocumentEmbedding(BaseSchemaTable):
         server_default=func.now(),
     )
     logical_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+def init_database(engine: Engine) -> None:
+    """Creates schemas, if they are do not exist."""
+    with engine.connect() as conn:
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS bronze;'))
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS silver;'))
+        conn.execute(text('CREATE SCHEMA IF NOT EXISTS gold;'))
+
+        conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector;'))
+
+        conn.commit()
+
+    BaseSchemaTable.metadata.create_all(bind=engine)
+
+    # Create index for vectors
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+            CREATE INDEX IF NOT EXISTS idx_doc_embeddings_hnsw
+            ON gold.document_embeddings
+            USING hnsw (embedding vector_ip_ops)
+            WITH (m = 16, ef_construction = 64);
+        """),
+        )

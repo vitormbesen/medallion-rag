@@ -15,7 +15,7 @@ def generate_document_id(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def fetch_document_from_api(title: str, logical_date: date) -> dict | None:
+def fetch_document_from_api(title: str, logical_date: date, user_agent: str) -> dict | None:
     """
     Data extraction function.
     Fetch text from an existing Wikipedia article using Wikipedia Open API.
@@ -26,7 +26,7 @@ def fetch_document_from_api(title: str, logical_date: date) -> dict | None:
         f'info&explaintext=1&inprop=url&titles={urllib.parse.quote(title)}&format=json'
     )
 
-    headers = {'User-Agent': 'MedallionRAG (Airflow class final project)'}  # required
+    headers = {'User-Agent': user_agent}  # required
     req = urllib.request.Request(url, headers=headers)
 
     try:
