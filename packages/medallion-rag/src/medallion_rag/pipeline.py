@@ -1,3 +1,4 @@
+import logging
 import math
 from typing import TYPE_CHECKING
 
@@ -6,6 +7,8 @@ if TYPE_CHECKING:
 
     from sentence_transformers import SentenceTransformer
     from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 
 def bronze_layer(title: str, logical_date: date, session: Session, user_agent: str) -> None:
@@ -17,6 +20,7 @@ def bronze_layer(title: str, logical_date: date, session: Session, user_agent: s
     from .persistence.writing import write_to_bronze
     from .processing.bronze import fetch_document_from_api
 
+    logger.info(f'BRONZE LAYER | Fetching Wikipedia article for title {title}')
     rows = fetch_document_from_api(title=title, logical_date=logical_date, user_agent=user_agent)
     write_to_bronze(rows=rows, session=session)
 
@@ -35,12 +39,16 @@ def silver_layer(logical_date: date, session: Session) -> None:
 
     # 1. Read data documents in Bronze layer that have been ingested in the respective logical date
     bronze_rows = read_bronze_for_documents(logical_date=logical_date, session=session)
+    logger.info(f'SILVER LAYER | Read {len(bronze_rows)} from bronze layer schema.')
 
     # 2. Chunk documents
     silver_rows = chunk_documents(rows=bronze_rows, logical_date=logical_date)
 
     # 3. Persist to Silver layer
     write_to_silver(rows=silver_rows, session=session)
+    logger.info(
+        f'SILVER LAYER | Created a total of {len(silver_rows)} chunks and persistent them to silver layer schema.',
+    )
 
 
 def gold_layer(logical_date: date, session: Session, model: SentenceTransformer, batch_size: int = 32) -> None:
@@ -58,7 +66,7 @@ def gold_layer(logical_date: date, session: Session, model: SentenceTransformer,
     # 1. Read the data from the Silver layer
     # Each row is a chunk
     silver_rows: list[dict] = read_silver_for_missing_embeddings_chunks(logical_date=logical_date, session=session)
-
+    logger.info(f'GOLD LAYER | Found a total of {len(silver_rows)} unprocessed chunks.')
     # 2. Apply the embedding, but batched
     # Partition data into batches
     n_batches = math.ceil(len(silver_rows) / batch_size)
@@ -86,3 +94,4 @@ def gold_layer(logical_date: date, session: Session, model: SentenceTransformer,
 
         # 3. Persists each batch to gold layer
         write_to_gold(rows=gold_rows, session=session)
+        logger.info(f'GOLD LAYER | Persisted batch {i}/{n_batches} of embeddings.')

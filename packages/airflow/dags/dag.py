@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 from airflow.sdk import dag, get_current_context, task
@@ -11,12 +12,52 @@ if TYPE_CHECKING:
 # ———————————————————————————————————————————————————————
 # Shared objects
 # ———————————————————————————————————————————————————————
+logger = logging.getLogger(__name__)
+
 tz = pendulum.timezone('America/Sao_Paulo')
+
+
+def _on_success_callback(context: dict) -> None:
+    ti = context['task_instance']
+    logger.info(
+        'SUCCESS | task=%s dag_run=%s try=%s duration=%.2fs',
+        ti.task_id,
+        ti.run_id,
+        ti.try_number,
+        context.get('duration') or 0.0,
+    )
+
+
+def _on_retry_callback(context: dict) -> None:
+    ti = context['task_instance']
+    logger.warning(
+        'RETRY | task=%s try=%s reason=%r',
+        ti.task_id,
+        ti.try_number,
+        context.get('exception'),
+    )
+
+
+def _on_failure_callback(context: dict) -> None:
+    ti = context['task_instance']
+    logger.error(
+        'FAILURE |task=%s dag_run=%s try=%s/%s exc=%r',
+        ti.task_id,
+        ti.run_id,
+        ti.try_number,
+        ti.max_tries + 1,
+        context.get('exception'),
+    )
+
+
 task_common_args = dict(
     retries=3,
     retry_delay=pendulum.duration(minutes=5),
     retry_exponential_backoff=True,
     max_active_tis_per_dagrun=4,
+    on_success_callback=_on_success_callback,
+    on_retry_callback=_on_retry_callback,
+    on_failure_callback=_on_failure_callback,
 )
 
 
@@ -67,8 +108,7 @@ def load_config() -> dict:
 
     path = Path('/opt/airflow/config/medallion_rag_config.yaml')
     cfg = omegaconf.OmegaConf.load(path)
-    # return omegaconf.OmegaConf.to_container(cfg, resolve=True)
-    return cfg
+    return omegaconf.OmegaConf.to_container(cfg)
 
 
 # ———————————————————————————————————————————————————————
@@ -160,12 +200,12 @@ def rag_population() -> None:
 
     # Run Medallion layers
     bronze = (
-        bronze_layer.partial(user_agent=config.bronze.user_agent).expand(  # constant value
-            title=config.bronze.titles
+        bronze_layer.partial(user_agent=config['bronze']['user_agent']).expand(  # constant value
+            title=config['bronze']['titles'],
         )  # dynamic value
     )
     silver = silver_layer()
-    gold = gold_layer(model_name=config.gold.model, batch_size=config.gold.batch_size)
+    gold = gold_layer(model_name=config['gold']['model'], batch_size=config['gold']['batch_size'])
 
     # Define execution order
     db_init >> bronze >> silver >> gold
