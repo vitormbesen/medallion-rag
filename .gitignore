@@ -6,7 +6,8 @@ dist/
 wheels/
 *.egg-info
 .project_idea.md
-.prototyping/
+files.txt
+script.sh
 
 packages/airflow/config/airflow.cfg
 packages/airflow/logs/
