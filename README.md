@@ -11,15 +11,12 @@
 - [Quick Start](#quick-start)
 - [Definição do Problema](#definição-do-problema)
 - [Arquitetura do Projeto](#arquitetura-do-projeto)
-  - [Imagem Customizada do Airflow & Estratégia de Ingestion do Pacote](#imagem-customizada-do-airflow--estratégia-de-ingestion-do-pacote)
-  - [Por que Airflow (e não Prefect)?](#por-que-airflow-e-não-prefect)
 - [Pacote Medallion-RAG](#pacote-medallion-rag)
 - [Orquestração com Airflow](#orquestração-com-airflow)
 - [Schema do Database](#schema-do-database)
 - [Configuração](#configuração)
 - [Demo & Uso](#demo--uso)
 - [Desenvolvimento](#desenvolvimento)
-- [Troubleshooting](#troubleshooting)
 
 ---
 ## Vídeo de Apresentação e Demo
@@ -57,7 +54,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 2. Clonar o Repositório
 
 ```bash
-git clone https://github.com/vitormbesen/medallion-rag/tree/main
+git clone https://github.com/vitormbesen/medallion-rag.git
 cd medallion-rag
 ```
 
@@ -69,7 +66,7 @@ Execute este único comando para gerar o `docker/.env` com o ID do usuário do s
 printf "AIRFLOW_UID=%s\nAIRFLOW_PROJ_DIR=../packages/airflow\n" "$(id -u)" > docker/.env
 ```
 
-### 4. Build e Iniciar os Serviços
+### 4. Build e Inicialização dos Serviços
 
 ```bash
 cd docker
@@ -77,13 +74,12 @@ docker compose up --build -d
 ```
 
 Isso irá:
-- Construir uma imagem customizada do Airflow com o pacote `medallion-rag` instalado
+- Construir uma imagem customizada do Airflow com o pacote `medallion-rag` instalado (a build completa leva cerca de 250 segundos).
 - Iniciar o PostgreSQL (metadata **database** do Airflow)
 - Iniciar o `pgvector/pgvector:pg16` (**vector database** do projeto na porta `5433`)
 - Inicializar o **database** do Airflow e criar o usuário admin
 - Iniciar o Airflow **API** Server (porta `8080`), **Scheduler** e o **DAG** Processor
 
-A build completa leva cerca de 250 segundos.
 
 ### 5. Acessar a UI do Airflow
 
@@ -107,11 +103,7 @@ cd demo
 uv run python demo.py --query "Buddhism" --top-k 5
 ```
 
-Ou utilize o Jupyter notebook:
-
-```bash
-uv run jupyter notebook demo/notebook.ipynb
-```
+Ou utilize o Jupyter notebook. [Clique aqui](#jupyter-notebook)
 
 ---
 
@@ -232,7 +224,7 @@ Dessa forma, o `medallion-rag` foi construído como um pacote Python à parte, o
 | **Agendamento** | Agendamento robusto baseado em cron com suporte a backfill | Baseado em eventos e intervalos |
 | **Ecossistema** | Enorme ecossistema de providers (Postgres, HTTP, etc.) | Crescente, porém menor |
 
-**Decisão:** Apesar de a maioria dos sistemas maduros em nível empresarial ainda utilizar o Airflow 2.x, como o Airflow 3.x traz mudanças na topologia, escolhemos o **Apache Airflow 3.2.2** por ser a versão mais atualizada. Para esta **task** em particular, previmos que o processamento seria em lote (batch), portanto **orientado a agendamento** em vez de orientado a eventos. A maturidade do Airflow, os mecanismos robustos de **retry** e a rica interface de observabilidade o tornam ideal para **pipelines** de dados em produção, onde a confiabilidade e a auditabilidade são fundamentais.
+Apesar de a maioria dos sistemas maduros em nível empresarial ainda utilizarem o Airflow 2.x, haja vista que o Airflow 3.x traz mudanças na topologia, ainda assim, escolhemos o **Apache Airflow 3.2.2** por ser a versão mais atualizada. Para esse **pipeline** em particular, previmos que o processamento seria em batch, ingerindo dados de alguma API com base em um schedule, em vez de orientado a eventos. A maturidade do Airflow em ambientes de produção, combinado a mecanismos robustos de **retry** e idempotência, diferentes providers e integrações, com rica interface de observabilidade o tornam ideal para **pipelines** de dados em produção, onde a confiabilidade e a auditabilidade são fundamentais.
 
 ---
 
@@ -276,10 +268,7 @@ Isso significa que reexecutar o **pipeline** para a mesma `logical_date` nunca c
 
 #### 2. Único Database, Múltiplos Schemas
 
-Em vez de implantar um **vector database** separado (ex: Pinecone, Weaviate, Milvus), utilizamos o **PostgreSQL com pgvector**:
-
-- As **layers** **Bronze**, **Silver** e **Gold** coexistem como **schemas** em um único **database**, cada schema contendo sua própria **table**.
-- Para **APIs** de inferência em produção, os vetores poderiam ser materializados em uma Feature Store (Feast com Milvus, por exemplo)
+Em vez de implantar um **vector database** separado (ex: Pinecone, Weaviate, Milvus), utilizamos o **PostgreSQL com pgvector**. As **layers** **Bronze**, **Silver** e **Gold** coexistem como **schemas** em um único **database**, cada schema contendo sua própria **table**. Para **APIs** de inferência em produção, os vetores poderiam ser materializados em uma Feature Store (Feast com Milvus, por exemplo), o qual poderia ser executado dentro da mesma DAG, ou por outra.
 
 #### 3. SQLAlchemy ORM
 
@@ -297,7 +286,7 @@ A **Gold layer** processa os **embeddings** em **batches** configuráveis (defau
 
 #### 6. Índice HNSW para ANN search
 
-A **Gold layer** cria um índice HNSW (Hierarchical Navigable Small World), com `ip` (**Inner Product**) como cálculo da distância entre vetores, matematicamente equivalente ao **cosine similarity**.
+A **Gold layer** cria um índice HNSW (**Hierarchical Navigable Small World**), com `ip` (**Inner Product**) como cálculo da distância entre vetores, matematicamente equivalente ao **cosine similarity**.
 
 ```sql
 CREATE INDEX idx_doc_embeddings_hnsw
@@ -357,11 +346,11 @@ A **layer** de orquestração reside em `packages/airflow/` e define a **DAG** `
 
 #### 1. Uma Task por Layer
 
-A primeira task apenas realização uma inicialização do database. Ela não é realmente necessária e pode ser executada por fora durante o processo de bootstrap da infraestrutura adjacente. De toda forma, o pipeline utiliza exatamente três tasks sequenciais principais. 
+A primeira task apenas realização uma inicialização do database. Ela não é realmente necessária e pode ser executada por fora durante o processo de bootstrap da infraestrutura subjacente. De toda forma, o pipeline utiliza exatamente três tasks sequenciais principais. 
 
-A dependência Bronze → Silver → Gold garante que o processamento da próxima layer nunca inicie antes da conclusão da anterior. A depender do objetivo final da DAG, esse requisito por ser essencial para garantir uma compreensão completa do LLM que consome esses chunks.
+A ordem Bronze → Silver → Gold garante que o processamento da próxima layer nunca inicie antes da conclusão da anterior. A depender do objetivo final da DAG, esse requisito por ser essencial para garantir uma compreensão completa do LLM que consome esses chunks.
 
-Por exemplo: se um chatbot de e-commerce for questionado sobre a política de devolução de produtos, mas a **Gold layer** tiver sido processada com dados parciais da **Bronze** (devido à falta de sincronização entre as **layers**), o LLM não terá a visão completa (*"whole picture"*) das regras — podendo omitir prazos de reembolso ou exceções críticas, o que resulta em respostas incompletas ou alucinações.
+Por exemplo: se um chatbot de e-commerce for questionado sobre a política de devolução de produtos, mas a **Gold layer** tiver sido processada com dados parciais da **Bronze** (devido à falta de sincronização entre as **layers**), o LLM não terá a visão completa das regras, podendo omitir prazos de reembolso ou exceções críticas, o que resulta em respostas incompletas.
 
 #### 2. Mapeamento Dinâmico de Tasks (Dynamic Task Mapping) para a Bronze
 
@@ -377,12 +366,12 @@ bronze = bronze_layer.partial(user_agent=config['bronze']['user_agent']).expand(
 
 #### 3. Task Única para Silver e Gold
 
-- **Silver:** Uma única **task** lê todos os documentos **Bronze** daquela `logical_date` e faz o **chunking**. Embora pudesse ser dividida em lotes ou paralelizada, uma única **task** simplifica os limites de transação e evita estados parciais na **Silver layer**.
-- **Gold:** Uma única **task** carrega o **model** de **embedding** **uma só vez** e processa todos os **batches**. O carregamento do **model** é custoso e o mesmos já possuem o processamento em **batch** que pode ser aproveitado.
+- **Silver:** Uma única **task** lê todos os documentos **Bronze** daquela `logical_date` e faz o **chunking**. Embora pudesse ser dividida em batches ou paralelizada, uma única **task** simplifica os limites de transação e evita estados parciais na **Silver layer**.
+- **Gold:** Uma única **task** carrega o **model** de **embedding** **uma só vez** e processa todos os **batches**. O carregamento do **model** é custoso e os mesmos já possuem o processamento em **batch** que pode ser aproveitado.
 
 #### 4. Sem Uso de XCOM Entre Tasks
 
-As **tasks** **não** passam dados via XCOM. Em vez disso, cada **task** lê e escreve diretamente no **database**, pois os textos dos documentos e os **embeddings** são volumosos, o que facilmente sobrecarregariam o backend do XCOM, além da duplicidade de dados (estariam persistidos tanto no database criado como no XCOM).
+As **tasks** **não** passam dados via XCOM. Em vez disso, cada **task** lê e escreve diretamente no **database**, pois os textos dos documentos e os **embeddings** são volumosos, o que facilmente sobrecarregariam o backend do XCOM, além de provocar duplicidade de dados (estariam persistidos tanto no database como no XCOM).
 
 
 #### 5. Configurabilidade
@@ -425,7 +414,7 @@ task_common_args = dict(
 - **Callbacks:** Aqui, para fins do projeto, eles apenas logam. Em amientes de produção, ideal é configurar alertas para Slack, Teams, e-mail, por exemplo.
 
 
-#### 7. Gerenciamento do Ciclo de Vida (Lifecycle Management)
+#### 7. Gerenciamento do Ciclo de Vida
 
 Cada **task** cria sua própria engine SQLAlchemy com `NullPool` e a encerra explicitamente dentro de um bloco `finally`, gerenciando o ciclo de vida das conexões com o **database**.
 
@@ -465,7 +454,7 @@ Cada **task** cria sua própria engine SQLAlchemy com `NullPool` e a encerra exp
 | `updated_at` | `TIMESTAMPTZ` | Timestamp da geração do **embedding** |
 | `logical_date` | `TIMESTAMPTZ` | Data de execução da **DAG** |
 
-**Índice:** `idx_doc_embeddings_hnsw` (HNSW na coluna `embedding` com `vector_ip_ops`)
+**Index:** `idx_doc_embeddings_hnsw` (HNSW na coluna `embedding` com `vector_ip_ops`)
 
 ---
 
@@ -544,7 +533,7 @@ cd demo
 uv sync
 ```
 
-Abra o notebook. Selecione o kernel local. O notebook oferece um ambiente interativo para explorar consultas e visualizar os scores de similaridade.
+Abra o notebook. Selecione o kernel com ambiente local (`demo`). O notebook oferece um ambiente interativo para explorar consultas e visualizar os scores de similaridade.
 
 ---
 
