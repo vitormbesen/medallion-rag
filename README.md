@@ -1,7 +1,3 @@
-Aqui está a tradução completa do documento para o Português do Brasil, mantendo os termos técnicos em inglês conforme solicitado.
-
-***
-
 # Medallion-RAG: Pipeline de Vetores Orquestrado para Aprimoramento de Contexto de LLM
 
 > Um pipeline de dados pronto para produção que implementa a Arquitetura **Medallion** (Bronze → Silver → Gold) para realizar **ingestion**, **chunking**, **embedding** e servir artigos da Wikipedia por meio de um **vector database** PostgreSQL, orquestrado pelo Apache Airflow 3.
