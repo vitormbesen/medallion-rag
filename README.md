@@ -51,22 +51,29 @@ O projeto foi desenvolvido e testado no seguinte ambiente:
 
 ## Quick Start
 
-### 1. Clonar o Repositório
+### 1. Instalar UV 
+`uv` será necessário para facilitar a demo. Instale `uv` em seu sistema com curl:
 
 ```bash
-git clone <repository-url>
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2. Clonar o Repositório
+
+```bash
+git clone https://github.com/vitormbesen/medallion-rag/tree/main
 cd medallion-rag
 ```
 
-### 2. Criar o Arquivo de Ambiente
+### 3. Criar o Arquivo .env
 
 Execute este único comando para gerar o `docker/.env` com o ID do usuário do seu host (evita problemas de permissão de volume no Linux/macOS):
 
 ```bash
-printf "AIRFLOW_UID=%s\nAIRFLOW_PROJ_DIR=.\n" "$(id -u)" > docker/.env
+printf "AIRFLOW_UID=%s\nAIRFLOW_PROJ_DIR=../packages/airflow\n" "$(id -u)" > docker/.env
 ```
 
-### 3. Build e Iniciar os Serviços
+### 4. Build e Iniciar os Serviços
 
 ```bash
 cd docker
@@ -80,20 +87,22 @@ Isso irá:
 - Inicializar o **database** do Airflow e criar o usuário admin
 - Iniciar o Airflow **API** Server (porta `8080`), **Scheduler** e o **DAG** Processor
 
-### 4. Acessar a UI do Airflow
+A build completa leva cerca de 250 segundos.
+
+### 5. Acessar a UI do Airflow
 
 Abra o seu navegador em: **http://localhost:8080**
 
 - **Username:** `airflow`
 - **Password:** `airflow`
 
-### 5. Executar o Pipeline
+### 6. Executar o Pipeline
 
 1. Navegue até **DAGs** → `rag_population`
 2. Despause a **DAG** (chave alternadora)
 3. (Opcional) Dispare uma execução manual ou aguarde a execução agendada
 
-### 6. Consultar o Vector Database
+### 7. Consultar o Vector Database
 
 Assim que o **pipeline** for concluído, você poderá consultar os **embeddings**:
 
@@ -135,48 +144,48 @@ Cada etapa possui modos de falha, requisitos de recursos e dependências das eta
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              HOST MACHINE                                   │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        Docker Compose Network                        │   │
-│  │                                                                      │   │
-│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │   │
-│  │   │   Airflow    │    │   Airflow    │    │    Airflow DAG       │  │   │
-│  │   │  API Server  │    │  Scheduler   │    │   Processor          │  │   │
-│  │   │   :8080      │    │              │    │                      │  │   │
-│  │   └──────┬───────┘    └──────┬───────┘    └──────────┬───────────┘  │   │
-│  │          │                   │                       │              │   │
-│  │          └───────────────────┼───────────────────────┘              │   │
-│  │                              │                                      │   │
-│  │                   ┌──────────▼──────────┐                          │   │
-│  │                   │   PostgreSQL        │                          │   │
-│  │                   │   (Airflow MetaDB)  │                          │   │
-│  │                   │   :5432             │                          │   │
-│  │                   └─────────────────────┘                          │   │
-│  │                              │                                      │   │
-│  │                   ┌──────────▼──────────┐                          │   │
-│  │                   │   pgvector /        │                          │   │
-│  │                   │   PostgreSQL 16     │◄──── localhost:5433      │   │
-│  │                   │   (Project DB)      │                          │   │
-│  │                   └─────────────────────┘                          │   │
-│  │                              ▲                                     │   │
-│  │                              │                                     │   │
-│  │   ┌──────────────────────────┴──────────────────────────┐         │   │
-│  │   │              medallion-rag (Python Package)          │         │   │
-│  │   │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │         │   │
-│  │   │  │ Bronze  │→ │ Silver  │→ │        Gold         │  │         │   │
-│  │   │  │  API    │  │ Chunking│  │  Embedding (HNSW)   │  │         │   │
-│  │   │  └─────────┘  └─────────┘  └─────────────────────┘  │         │   │
-│  │   └─────────────────────────────────────────────────────┘         │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        Docker Compose Network                       │    │
+│  │                                                                     │    │
+│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │    │
+│  │   │   Airflow    │    │   Airflow    │    │    Airflow DAG       │  │    │
+│  │   │  API Server  │    │  Scheduler   │    │   Processor          │  │    │
+│  │   │   :8080      │    │              │    │                      │  │    │
+│  │   └──────┬───────┘    └──────┬───────┘    └──────────┬───────────┘  │    │
+│  │          │                   │                       │              │    │
+│  │          └───────────────────┼───────────────────────┘              │    │
+│  │                              │                                      │    │
+│  │                   ┌──────────▼──────────┐                           │    │
+│  │                   │   PostgreSQL        │                           │    │
+│  │                   │   (Airflow MetaDB)  │                           │    │
+│  │                   │   :5432             │                           │    │
+│  │                   └─────────────────────┘                           │    │
+│  │                              │                                      │    │
+│  │                   ┌──────────▼──────────┐                           │    │
+│  │                   │   pgvector /        │                           │    │
+│  │                   │   PostgreSQL 16     │◄──── localhost:5433       │    │
+│  │                   │   (Project DB)      │                           │    │
+│  │                   └─────────────────────┘                           │    │
+│  │                              ▲                                      │    │
+│  │                              │                                      │    │
+│  │   ┌──────────────────────────┴──────────────────────────┐           │    │
+│  │   │              medallion-rag (Python Package)          │          │    │
+│  │   │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │           │    │
+│  │   │  │ Bronze  │→ │ Silver  │→ │        Gold         │  │           │    │
+│  │   │  │  API    │  │ Chunking│  │  Embedding (HNSW)   │  │           │    │
+│  │   │  └─────────┘  └─────────┘  └─────────────────────┘  │           │    │
+│  │   └─────────────────────────────────────────────────────┘           │    │
+│  │                                                                     │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐   │
 │   │                         UV Workspace                                │   │
-│   │  ┌─────────────────┐        ┌─────────────────┐                    │   │
-│   │  │  packages/      │        │  demo/          │                    │   │
-│   │  │  ├── airflow/   │        │  ├── demo.py    │                    │   │
-│   │  │  └── medallion- │        │  └── notebook.  │                    │   │
-│   │  │      rag/       │        │      ipynb      │                    │   │
-│   │  └─────────────────┘        └─────────────────┘                    │   │
+│   │  ┌─────────────────┐        ┌─────────────────┐                     │   │
+│   │  │  packages/      │        │  demo/          │                     │   │
+│   │  │  ├── airflow/   │        │  ├── demo.py    │                     │   │
+│   │  │  └── medallion- │        │  └── notebook.  │                     │   │
+│   │  │      rag/       │        │      ipynb      │                     │   │
+│   │  └─────────────────┘        └─────────────────┘                     │   │
 │   └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -557,3 +566,7 @@ packages/
 └── airflow/                # Layer de Orquestração
     └── pyproject.toml
 ```
+
+## Declaração de Uso de IA
+
+Este **README** foi elaborado com o auxílio de **LLMs** para organização, estruturação, criação de diagramas, e descrição dos componentes técnicos, sendo integralmente revisado, ajustado e validado pelo autor.
