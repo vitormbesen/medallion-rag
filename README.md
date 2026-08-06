@@ -1,6 +1,6 @@
 # Medallion-RAG: Pipeline de Vetores Orquestrado para Aprimoramento de Contexto de LLM
 
-> Um pipeline de dados pronto para produção que implementa a Arquitetura **Medallion** (Bronze → Silver → Gold) para realizar **ingestion**, **chunking**, **embedding** e servir artigos da Wikipedia por meio de um **vector database** PostgreSQL, orquestrado pelo Apache Airflow 3.
+> Um pipeline de dados que implementa a Arquitetura **Medallion** (Bronze → Silver → Gold) para realizar **ingestion**, **chunking**, **embedding** e servir artigos da Wikipedia por meio de um **vector database** PostgreSQL, orquestrado pelo Apache Airflow 3.
 
 ---
 
@@ -38,7 +38,7 @@ O projeto foi desenvolvido e testado no seguinte ambiente:
 
 ### Recomendações de Hardware
 
-- **Recomendado:** ~10 GB RAM, 4 CPUs, 25 GB de disco
+- **Recomendado mínimo:** ~10 GB RAM, 4 CPUs, 30 GB de disco
 
 ---
 
@@ -49,6 +49,7 @@ O projeto foi desenvolvido e testado no seguinte ambiente:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env
 ```
 
 ### 2. Clonar o Repositório
@@ -74,7 +75,7 @@ docker compose up --build -d
 ```
 
 Isso irá:
-- Construir uma imagem customizada do Airflow com o pacote `medallion-rag` instalado (a build completa leva cerca de 250 segundos).
+- Construir uma imagem customizada do Airflow com o pacote `medallion-rag` instalado (a build completa leva cerca de 250-300 segundos).
 - Iniciar o PostgreSQL (metadata **database** do Airflow)
 - Iniciar o `pgvector/pgvector:pg16` (**vector database** do projeto na porta `5433`)
 - Inicializar o **database** do Airflow e criar o usuário admin
@@ -96,14 +97,14 @@ Abra o seu navegador em: **http://localhost:8080**
 
 ### 7. Consultar o Vector Database
 
-Assim que o **pipeline** for concluído, você poderá consultar os **embeddings**:
+Assim que o **pipeline** for concluído, você poderá consultar os **embeddings** com o comando abaixo, ou utilize o Jupyter notebook. [Clique aqui](#jupyter-notebook)
 
 ```bash
 cd demo
 uv run python demo.py --query "Buddhism" --top-k 5
 ```
+Modifique a **query** como desejar.
 
-Ou utilize o Jupyter notebook. [Clique aqui](#jupyter-notebook)
 
 ---
 
@@ -121,7 +122,6 @@ Construir um sistema de **RAG (Retrieval Augmented Generation)** envolve a coord
 2. **Chunking:** Limpar, normalizar e fazer o **chunking** dos documentos em pedaços semanticamente significativos
 3. **Embedding:** Converter **chunks** de texto em representações vetoriais de alta dimensão por meio the redes neurais
 4. **Armazenamento:** Persistir vetores em um **database** otimizado para *Approximate Nearest Neighbor* (ANN) search
-5. **Servimento (Serving):** Permitir a recuperação semântica de baixa latência para augment dos prompts de LLMs
 
 Cada etapa possui modos de falha, requisitos de recursos e dependências das etapas anteriores, se tornando necessário um orquestração para garantir coordenação, reprodutibilidade e atualização do sistema.
 
@@ -217,14 +217,9 @@ Dessa forma, o `medallion-rag` foi construído como um pacote Python à parte, o
 
 ### Escolha do Airflow como orquestrador
 
-| Critério | Airflow | Prefect |
-|-----------|---------|---------|
-| **Maturidade** | Testado em batalha desde 2015; ampla adoção corporativa | Moderno; mais simples para **workflows** em Python puro |
-| **UI & Observabilidade** | UI web rica com gráficos de **DAG**, gráficos de Gantt, logs de **tasks** | UI limpa; menor visibilidade operacional |
-| **Agendamento** | Agendamento robusto baseado em cron com suporte a backfill | Baseado em eventos e intervalos |
-| **Ecossistema** | Enorme ecossistema de providers (Postgres, HTTP, etc.) | Crescente, porém menor |
+Apesar de a maioria dos sistemas maduros em nível empresarial ainda utilizarem o Airflow 2.x, haja vista que o Airflow 3.x traz mudanças na topologia, ainda assim, escolhemos o **Apache Airflow 3.2.2** por ser a versão mais atualizada. Para esse **pipeline** em particular, previmos que o processamento seria em batch, ingerindo dados de alguma API com base em um **schedule**, pesando a favor do Airflow, em vez do Prefect, que tende a ser empregado em arquiteturas **event-driven**. 
 
-Apesar de a maioria dos sistemas maduros em nível empresarial ainda utilizarem o Airflow 2.x, haja vista que o Airflow 3.x traz mudanças na topologia, ainda assim, escolhemos o **Apache Airflow 3.2.2** por ser a versão mais atualizada. Para esse **pipeline** em particular, previmos que o processamento seria em batch, ingerindo dados de alguma API com base em um schedule, em vez de orientado a eventos. A maturidade do Airflow em ambientes de produção, combinado a mecanismos robustos de **retry** e idempotência, diferentes providers e integrações, com rica interface de observabilidade o tornam ideal para **pipelines** de dados em produção, onde a confiabilidade e a auditabilidade são fundamentais.
+Além disso, a Airflow é uma ferramenta com anos maturidade do Airflow em ambientes de produção, com um rico ecossistema de providers e integrações, combinado a mecanismos robustos de **retry** e idempotência. Também vale ressaltar que o Airflow possui versões gerenciadas como MWAA da AWS, Managed Service for Apache Airflow do GCP, tornando o pipeline portável nesses ambientes, pois o código da DAG permanece o mesmo. 
 
 ---
 
@@ -243,11 +238,11 @@ packages/medallion-rag/
 │   │   ├── writing.py         # Operações de escrita com idempotência via UPSERT
 │   │   └── __init__.py
 │   ├── processing/
-│   │   ├── bronze.py          # Ingestion via API da Wikipedia
+│   │   ├── bronze.py          # Ingestão via API da Wikipedia
 │   │   ├── silver.py          # Chunking recursivo de texto
 │   │   ├── gold.py            # Geração de embeddings com SentenceTransformer
 │   │   └── __init__.py
-│   ├── pipeline.py            # Funções de alta abstração para orquestração das layers
+│   ├── pipeline.py            # Funções para orquestração das layers
 │   ├── search.py              # ANN search sobre a Gold layer
 │   └── __init__.py
 ├── pyproject.toml
@@ -348,7 +343,7 @@ A **layer** de orquestração reside em `packages/airflow/` e define a **DAG** `
 
 A primeira task apenas realização uma inicialização do database. Ela não é realmente necessária e pode ser executada por fora durante o processo de bootstrap da infraestrutura subjacente. De toda forma, o pipeline utiliza exatamente três tasks sequenciais principais. 
 
-A ordem Bronze → Silver → Gold garante que o processamento da próxima layer nunca inicie antes da conclusão da anterior. A depender do objetivo final da DAG, esse requisito por ser essencial para garantir uma compreensão completa do LLM que consome esses chunks.
+A ordem Bronze → Silver → Gold garante que o processamento da próxima layer nunca inicie antes da conclusão da anterior. A depender do objetivo final da DAG, esse requisito por ser essencial para garantir uma compreensão completa do LLM que consome esses chunks, caso contrário, as buscas poderão retornar resultados parciais e incompletos.
 
 Por exemplo: se um chatbot de e-commerce for questionado sobre a política de devolução de produtos, mas a **Gold layer** tiver sido processada com dados parciais da **Bronze** (devido à falta de sincronização entre as **layers**), o LLM não terá a visão completa das regras, podendo omitir prazos de reembolso ou exceções críticas, o que resulta em respostas incompletas.
 
