@@ -22,6 +22,8 @@ def bronze_layer(title: str, logical_date: date, session: Session, user_agent: s
 
     logger.info(f'BRONZE LAYER | Fetching Wikipedia article for title {title}')
     rows = fetch_document_from_api(title=title, logical_date=logical_date, user_agent=user_agent)
+    if rows is None:
+        return
     write_to_bronze(rows=rows, session=session)
 
 

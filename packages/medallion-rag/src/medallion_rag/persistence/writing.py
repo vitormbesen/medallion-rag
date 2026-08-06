@@ -33,6 +33,8 @@ def build_upsert_dict(
 def write_to_bronze(rows: list[dict], session: Session) -> None:
     """Write provided data to bronze layer."""
     # Upsert logic for idempotency
+    if not rows:
+        return
     stmt = pg_insert(RawDocument).values(rows)
     stmt = stmt.on_conflict_do_update(
         index_elements=['document_id'],

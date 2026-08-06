@@ -1,10 +1,13 @@
 """Data extraction and processing for persistence on the Bronze Layer."""
 
+import logging
 import hashlib
 import json
 from typing import TYPE_CHECKING
 import urllib.parse
 import urllib.request
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from datetime import date
@@ -35,6 +38,7 @@ def fetch_document_from_api(title: str, logical_date: date, user_agent: str) -> 
             pages = data.get('query', {}).get('pages', {})
             for page_id, page_data in pages.items():
                 if page_id == '-1':  # Page not found
+                    logger.warning(f'Wikipedia article not found for title: `{title}`')
                     return None
 
                 # Metadata + text
@@ -53,5 +57,5 @@ def fetch_document_from_api(title: str, logical_date: date, user_agent: str) -> 
                 }
 
     except Exception as e:
-        print(f'Failed to fetch {title}: {e}')
-        return None
+        logger.error(f'Failed to fetch {title}: {e}')
+        raise

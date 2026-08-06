@@ -4,6 +4,8 @@ bronze:
     - Buddhism
     - Hinduism
     - Christianity
+    - Judaism
+    - Islamism
 
 gold:
   model: 'sentence-transformers/all-MiniLM-L6-v2'
