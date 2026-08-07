@@ -100,7 +100,7 @@ Abra o seu navegador em: **http://localhost:8080**
 Assim que o **pipeline** for concluído, você poderá consultar os **embeddings** com o comando abaixo, ou utilize o Jupyter notebook. [Clique aqui](#jupyter-notebook)
 
 ```bash
-cd demo
+cd ../demo
 uv run python demo.py --query "Buddhism" --top-k 5
 ```
 Modifique a **query** como desejar.
